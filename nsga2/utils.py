@@ -52,11 +52,11 @@ class NSGA2Utils(object):
             
             for m in range(len(front[0].objectives)):
                 front = sorted(front, cmp=functools.partial(self.__sort_objective, m=m))
-                front[0].crowding_distance = self.problem.max_objectives[m]
-                front[solutions_num-1].crowding_distance = self.problem.max_objectives[m]
-                for index, value in enumerate(front[1:solutions_num-1]):
-                    front[index].crowding_distance = (front[index+1].crowding_distance - front[index-1].crowding_distance) / (self.problem.max_objectives[m] - self.problem.min_objectives[m])
-                
+                front[0].crowding_distance = float('inf')
+                front[-1].crowding_distance = float('inf')
+                for index, value in enumerate(front[1:-1]):
+                    front[index].crowding_distance += (front[index+1].objectives[m] - front[index-1].objectives[m])
+                    
     def crowding_operator(self, individual, other_individual):
         if (individual.rank < other_individual.rank) or \
             ((individual.rank == other_individual.rank) and (individual.crowding_distance > other_individual.crowding_distance)):
