@@ -6,12 +6,12 @@ class Individual(object):
     
     def __init__(self):
         self.rank = None
-        self.crowding_distance = None
+        self.crowding_distance = 0
         self.dominated_solutions = set()
         self.features = None
+        self.normalized_objectives = None
         self.objectives = None
         self.dominates = None
-        
+
     def set_objectives(self, objectives):
         self.objectives = objectives
-        

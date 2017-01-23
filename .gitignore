@@ -1,3 +1,11 @@
+# PyCharm folder
+.idea/
+
+# Compiled python files
 *.pyc
-.idea
-plots
+*.egg-info/
+build/
+dist/
+
+# Built Documents
+docs/_build/

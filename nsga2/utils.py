@@ -1,8 +1,12 @@
 """NSGA-II related functions"""
 
 import functools
-from nsga2.population import Population
 import random
+
+import numpy as np
+
+from nsga2.population import Population
+
 
 class NSGA2Utils(object):
     
@@ -11,16 +15,28 @@ class NSGA2Utils(object):
         self.problem = problem
         self.num_of_individuals = num_of_individuals
         self.mutation_strength = mutation_strength
-        self.number_of_genes_to_mutate = num_of_genes_to_mutate
+        self.number_of_genes_to_mutate = min(num_of_genes_to_mutate, problem.n - 1)
         self.num_of_tour_particips = num_of_tour_particips
         
     def fast_nondominated_sort(self, population):
+        """
+        Conduct nondominated_sort on population(Iterable of nsga2.individual.Individual)
+        Section 3.1 (p.4) on paper.
+
+        :param population:
+        :type population: nsga2.population.Population
+
+        :return: None
+
+        .. warning:: population is modified and nondominated_sort is applied.
+        """
         population.fronts = []
-        population.fronts.append([]) 
+        population.fronts.append([])
+
         for individual in population:
             individual.domination_count = 0
             individual.dominated_solutions = set()
-            
+
             for other_individual in population:
                 if individual.dominates(other_individual):
                     individual.dominated_solutions.add(other_individual)
@@ -40,26 +56,23 @@ class NSGA2Utils(object):
                         temp.append(other_individual)
             i = i+1
             population.fronts.append(temp)
-                    
-    def __sort_objective(self, val1, val2, m):
-        return cmp(val1.objectives[m], val2.objectives[m])
-    
+
     def calculate_crowding_distance(self, front):
         if len(front) > 0:
-            solutions_num = len(front)
             for individual in front:
                 individual.crowding_distance = 0
-            
-            for m in range(len(front[0].objectives)):
-                front = sorted(front, cmp=functools.partial(self.__sort_objective, m=m))
+
+            for m in range(len(front[0].normalized_objectives)):
+                front = sorted(front, key=lambda x: x.normalized_objectives[m])
                 front[0].crowding_distance = float('inf')
                 front[-1].crowding_distance = float('inf')
                 for index, value in enumerate(front[1:-1]):
-                    front[index].crowding_distance += (front[index+1].objectives[m] - front[index-1].objectives[m])
-                    
+                    index += 1
+                    front[index].crowding_distance += (front[index + 1].normalized_objectives[m] - front[index - 1].normalized_objectives[m])
+
     def crowding_operator(self, individual, other_individual):
-        if (individual.rank < other_individual.rank) or \
-            ((individual.rank == other_individual.rank) and (individual.crowding_distance > other_individual.crowding_distance)):
+        less_crowded = (individual.crowding_distance > other_individual.crowding_distance)
+        if (individual.rank < other_individual.rank) or ((individual.rank == other_individual.rank) and less_crowded):
             return 1
         else:
             return -1
@@ -75,6 +88,7 @@ class NSGA2Utils(object):
     
     def create_children(self, population):
         children = []
+        self.problem.objectives = np.ones((1, self.problem.dimensions))
         while len(children) < len(population):
             parent1 = self.__tournament(population)
             parent2 = parent1
@@ -107,17 +121,19 @@ class NSGA2Utils(object):
     def __mutate(self, child):
         genes_to_mutate = random.sample(range(0, len(child.features)), self.number_of_genes_to_mutate)
         for gene in genes_to_mutate:
-            child.features[gene] = child.features[gene] - self.mutation_strength/2 + random.random() * self.mutation_strength
-            if child.features[gene] < 0:
-                child.features[gene] = 0
-            elif child.features[gene] > 1:
-                child.features[gene] = 1
+            child.features[gene] += random.random() * self.mutation_strength - self.mutation_strength/2
+            if child.features[gene] < self.problem.bounds[gene][0]:
+                child.features[gene] = self.problem.bounds[gene][0]
+            elif child.features[gene] > self.problem.bounds[gene][1]:
+                child.features[gene] = self.problem.bounds[gene][1]
         
     def __tournament(self, population):
-        participants = random.sample(population, self.num_of_tour_particips)
-        best = None
-        for participant in participants:
-            if best is None or self.crowding_operator(participant, best) == 1:
-                best = participant
+        """
 
-        return best
+        :param population: ioptimizer.nsga2.population.Population
+        :return:
+        """
+        participants = random.sample(population.population, self.num_of_tour_particips)
+        return max(sorted(participants,
+                          key=functools.cmp_to_key(self.crowding_operator)),
+                   key=functools.cmp_to_key(self.crowding_operator))

@@ -1,12 +1,22 @@
-#!/usr/bin/env python
+from setuptools import setup, find_packages
 
-from distutils.core import setup
 
-setup(name='nsga2',
-      version='0.2',
-      description='NSGA-II Algorithm implementation',
-      author='Wojciech Reszelewski, Kamil Mielnik',
-      author_email='wreszelewski@gmail.com',
-      url = "https://github.com/wreszelewski/nsga2",
-      packages=['nsga2', 'nsga2.problems', 'nsga2.problems.zdt', 'metrics', 'metrics.problems'],
-     )
+with open('README.md') as f:
+    readme = f.read()
+
+setup(
+    name='nsga2',
+    version='0.0.1',
+    description='Nondominated Sort Genetic Algorithm 2',
+    long_description=readme,
+    author='Rikuo Hasegawa',
+    author_email='rikuo.hase1997@gmail.com',
+    install_requires=[
+        'numpy',
+        'deap',
+        'matplotlib'],
+    url='https://github.com/Spaghet/nsga2',
+    license=None,
+    packages=find_packages(exclude=('tests', 'docs')),
+    test_suite='tests'
+)
